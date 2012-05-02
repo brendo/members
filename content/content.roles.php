@@ -11,10 +11,9 @@
 
 			if(is_null(extension_Members::getFieldHandle('role')) && !is_null(extension_Members::getMembersSection())) {
 				$this->pageAlert(
-					__('There is no Member: Role field in the active Members section. <a href="%s%d/">Add Member: Role field?</a>',
+					__('There are no Member: Role fields in this Symphony installation. <a href="%s/">Add Member: Role field?</a>',
 					array(
-						SYMPHONY_URL . '/blueprints/sections/edit/',
-						extension_Members::getMembersSection()
+						SYMPHONY_URL . '/blueprints/sections/'
 					)),
 					Alert::NOTICE
 				);
@@ -39,13 +38,8 @@
 				));
 			}
 
-			else if(is_null(extension_Members::getMembersSection())) {
-				$aTableBody = array(Widget::TableRow(
-					array(Widget::TableData(__('No Member section has been specified in <a href="%s">Preferences</a>. Please do this first.', array(SYMPHONY_URL.'/system/preferences/')), 'inactive', NULL, count($aTableHead)))
-				));
-			}
-
 			else {
+				// @todo, this needs to generate a column for each role field installed
 				$section = SectionManager::fetch(extension_Members::getMembersSection());
 
 				$with_selected_roles = array();

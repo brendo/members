@@ -439,8 +439,14 @@
 		 * @return integer
 		 */
 		public static function getMembersSection() {
+			// Old
 			if(is_null(extension_Members::$members_section)) {
 				extension_Members::$members_section = extension_Members::getSetting('section');
+			}
+
+			// New
+			if(isset($_REQUEST['member_section'])) {
+				extension_Members::$members_section = $_REQUEST['member_section'];
 			}
 
 			return extension_Members::$members_section;
@@ -487,18 +493,34 @@
 
 			$type = self::getFieldType($type);
 
+			if(is_null($section_id)) $section_id = self::getMembersSection();
+
 			// Check to see if this name has been stored in our 'static' cache
 			// If it hasn't, lets go find it (for better or worse)
-			if(!isset(extension_Members::$fields[$type])) {
+			if(!isset(extension_Members::$fields[$type]) || (!is_null($section_id) && !isset(extension_Members::$fields[$section_id][$type]))) {
 				$field = FieldManager::fetch(null, $section_id, null, null, $type);
 
-				if(!empty($field)) {
-					extension_Members::$fields[$type] = $field;
-					extension_Members::$handles[$type] = $field->get('element_name');
+				if(is_array($field)) {
+					foreach($field as $f) {
+						extension_Members::$fields[$type][] = $f;
+						extension_Members::$fields[$field->get('parent_section')][$type] = $f;
+						extension_Members::$handles[$type][] = $f->get('element_name');
+						extension_Members::$handles[$field->get('parent_section')][$type] = $f->get('element_name');
+					}
+				}
+				else if(!empty($field)) {
+					extension_Members::$fields[$type][] = $field;
+					extension_Members::$fields[$field->get('parent_section')][$type] = $field;
+					extension_Members::$handles[$type][] = $field->get('element_name');
+					extension_Members::$handles[$field->get('parent_section')][$type] = $field->get('element_name');
 				}
 			}
 
 			// If it has, return it.
+			if(!is_null($section_id) && isset(extension_Members::$fields[$section_id][$type])) {
+				return extension_Members::$fields[$section_id][$type];
+			}
+
 			return extension_Members::$fields[$type];
 		}
 
@@ -513,10 +535,18 @@
 		 * @param string $type
 		 * @return string
 		 */
-		public static function getFieldHandle($type = null) {
+		public static function getFieldHandle($type = null, $section_id = null) {
 			$type = self::getFieldType($type);
 
-			if(!isset(extension_Members::$handles[$type])) return null;
+			if(is_null($section_id)) $section_id = self::getMembersSection();
+
+			if(!isset(extension_Members::$handles[$type]) || !isset(extension_Members::$handles[$section_id][$type])) {
+				return null;
+			}
+
+			if(!is_null($section_id) && isset(extension_Members::$handles[$section_id][$type])) {
+				return extension_Members::$handles[$section_id][$type];
+			}
 
 			return extension_Members::$handles[$type];
 		}
@@ -541,7 +571,7 @@
 				DateTimeObj::setDefaultTimezone($tz);
 			}
 			catch(Exception $ex) {
-				Symphony::$Log->pushToLog(__('Members Timezone') . ': ' . $ex->getMessage(), $code, true);
+				Symphony::Log()->pushToLog(__('Members Timezone') . ': ' . $ex->getMessage(), $code, true);
 			}
 		}
 
